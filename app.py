@@ -331,7 +331,7 @@ def extract_bill_data(payload: DocumentInput):
         raise HTTPException(status_code=500, detail=f"Failed to encode file: {e}\n{tb}")
 
     # Step 4: Call OpenRouter API with Gemini 2.0 Flash
-    prompt = f"File type: {kind} (mime: {mime_type})\n\n{ENHANCED_PROMPT}"
+    prompt = f"File type: {kind} (mime: {mime_type})\n\n{PROMPT}"
     
     try:
         # Prepare OpenRouter request

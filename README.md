@@ -1,10 +1,14 @@
-# Medical Bill Extraction API
+# Medical Bill Extraction API 🏥
 
-High-accuracy medical bill extraction API using **Gemini 2.0 Flash** for the HackRx Datathon.
+High-accuracy medical bill extraction API using **Gemini 2.0 Flash** via **OpenRouter** for the HackRx Datathon.
+
+[![API Status](https://img.shields.io/badge/status-active-success.svg)](http://localhost:8000)
+[![Model](https://img.shields.io/badge/model-Gemini%202.0%20Flash-blue.svg)](https://openrouter.ai)
+[![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 
 ## 🎯 Features
 
-- ✅ **Gemini 2.0 Flash Experimental** - Latest and most accurate model
+- ✅ **Gemini 2.0 Flash** - Latest AI model via OpenRouter
 - ✅ **Multi-format Support** - PDF and images (PNG, JPG, JPEG, WEBP, etc.)
 - ✅ **Duplicate Detection** - Prevents double-counting items across pages
 - ✅ **Validation System** - Compares calculated vs extracted totals
@@ -14,36 +18,47 @@ High-accuracy medical bill extraction API using **Gemini 2.0 Flash** for the Hac
 
 ## 🚀 Quick Start
 
-### 1. Install Dependencies
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/jaiyankargupta/hacks.git
+cd hacks
+```
+
+### 2. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Set Up Environment
+### 3. Set Up Environment
 
 ```bash
-cp .env.example .env
-# Edit .env and add your GOOGLE_API_KEY
+# Create .env file
+echo "OPENROUTER_API_KEY=your_openrouter_api_key" > .env
 ```
 
-### 3. Run the Server
+### 4. Run the Server
 
 ```bash
 uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## 📡 API Endpoints
+Server will start at: `http://localhost:8000`
+
+## 📡 API Usage
 
 ### POST /extract-bill-data
 
 Extract line items from medical bills.
 
 **Request:**
-```json
-{
-  "document": "https://example.com/bill.pdf"
-}
+```bash
+curl -X POST "http://localhost:8000/extract-bill-data" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document": "https://example.com/bill.pdf"
+  }'
 ```
 
 **Response:**
@@ -92,132 +107,231 @@ Extract line items from medical bills.
 }
 ```
 
-### GET /
+### GET /health
 
 Health check endpoint.
 
-### GET /health
+```bash
+curl http://localhost:8000/health
+```
 
-Detailed health status.
+### GET /
+
+Simple status check.
+
+```bash
+curl http://localhost:8000/
+```
 
 ## 🧠 How It Works
 
-### 1. **Enhanced Prompt Engineering**
-- Detailed instructions for extracting ALL line items
-- Explicit duplicate detection rules
-- Sub-total and final total extraction
-- Validation requirements
+### Architecture
 
-### 2. **Multi-Step Processing**
 ```
-Document URL → Fetch → Detect Type → Upload to Gemini → 
-Extract with AI → Parse JSON → Validate → Return Results
+Document URL → Fetch → Detect Type → Encode Base64 → 
+OpenRouter API (Gemini 2.0 Flash) → Parse JSON → 
+Validate → Return Results
 ```
 
-### 3. **Validation System**
-- Calculates total from line items
-- Compares with extracted final total
-- Flags discrepancies > ₹1
-- Detects duplicate items across pages
+### Accuracy Strategy
 
-### 4. **Duplicate Detection**
-- Creates fingerprint: `item_name + item_amount`
-- Tracks items across pages
-- Prevents double-counting
+1. **Enhanced Prompt Engineering**
+   - Detailed instructions for extracting ALL line items
+   - Explicit duplicate detection rules
+   - Sub-total and final total extraction
+   - Validation requirements
 
-## 📊 Accuracy Features
+2. **Multi-Step Validation**
+   ```python
+   calculated_total = sum(all_line_items)
+   extracted_total = final_total_from_bill
+   match_percentage = accuracy_metric
+   ```
 
-| Feature | Description |
-|---------|-------------|
-| **Calculated Total** | Sum of all line item amounts |
-| **Extracted Total** | Final total from bill |
-| **Match Percentage** | Accuracy metric (target: >95%) |
-| **Duplicate Count** | Number of duplicate items detected |
-| **Missing Data** | Tracks items with missing rate/quantity |
+3. **Duplicate Detection**
+   - Creates fingerprint: `item_name + item_amount`
+   - Tracks items across pages
+   - Prevents double-counting
+
+4. **Comprehensive Schema**
+   - Page-wise line items
+   - Section-wise subtotals
+   - Final total
+   - Validation metrics
+
+## 📊 Response Schema
+
+```json
+{
+  "is_success": "boolean",
+  "token_usage": {
+    "total_tokens": "integer",
+    "input_tokens": "integer",
+    "output_tokens": "integer"
+  },
+  "data": {
+    "pagewise_line_items": [
+      {
+        "page_no": "string",
+        "page_type": "Bill Detail | Final Bill | Pharmacy",
+        "bill_items": [
+          {
+            "item_name": "string",
+            "item_amount": "float",
+            "item_rate": "float",
+            "item_quantity": "float"
+          }
+        ]
+      }
+    ],
+    "section_wise_subtotals": [
+      {
+        "section_name": "string",
+        "subtotal": "float",
+        "item_count": "integer"
+      }
+    ],
+    "final_total": "float",
+    "total_item_count": "integer"
+  },
+  "validation": {
+    "has_final_total": "boolean",
+    "calculated_total": "float",
+    "extracted_total": "float",
+    "match_percentage": "float",
+    "has_discrepancy": "boolean",
+    "discrepancy_amount": "float",
+    "duplicate_count": "integer"
+  }
+}
+```
 
 ## 🔧 Configuration
 
-### Model Selection
-Currently using: `gemini-2.0-flash-exp`
+### OpenRouter Setup
+
+1. Get API key from [OpenRouter](https://openrouter.ai/)
+2. Add to `.env` file:
+   ```
+   OPENROUTER_API_KEY=sk-or-v1-...
+   ```
+
+### Model Configuration
+
+Currently using: `google/gemini-2.0-flash-exp:free`
 
 To change model, edit `app.py`:
 ```python
-model="gemini-2.0-flash-exp"  # Change here
+"model": "google/gemini-2.0-flash-exp:free"  # Change here
 ```
 
-### Validation Threshold
-Default: 90% match required
+Available models on OpenRouter:
+- `google/gemini-2.0-flash-exp:free` (Free tier)
+- `google/gemini-pro-1.5` (Paid)
+- `anthropic/claude-3.5-sonnet` (Paid)
+- And many more...
 
-To adjust, edit `app.py`:
-```python
-if validation.get('match_percentage', 0) < 90:  # Change threshold
-```
+## 📈 Performance Metrics
 
-## 📝 Testing
+Expected performance on medical bills:
 
-### Using cURL
+| Metric | Target | Strategy |
+|--------|--------|----------|
+| **Accuracy** | 92-95% | Enhanced prompt + validation |
+| **Speed** | 2-4 sec | Gemini 2.0 Flash optimization |
+| **Cost** | FREE | Using free tier |
+| **Duplicate Prevention** | 100% | Fingerprint detection |
+| **Total Match** | >95% | Mathematical validation |
+
+## 🧪 Testing
+
+### Run Test Script
+
 ```bash
+python test_api.py
+```
+
+### Manual Testing
+
+```bash
+# Test with sample bill
 curl -X POST "http://localhost:8000/extract-bill-data" \
   -H "Content-Type: application/json" \
-  -d '{"document": "https://example.com/bill.pdf"}'
+  -d '{
+    "document": "https://hackrx.blob.core.windows.net/assets/datathon-IIT/sample_1.pdf"
+  }'
 ```
-
-### Using Python
-```python
-import requests
-
-response = requests.post(
-    "http://localhost:8000/extract-bill-data",
-    json={"document": "https://example.com/bill.pdf"}
-)
-print(response.json())
-```
-
-## 🎯 Optimization Tips
-
-1. **For Complex Bills**: The model automatically handles multi-page documents
-2. **For Better Accuracy**: Ensure bills are clear and readable
-3. **For Speed**: Use smaller image sizes when possible
-4. **For Cost**: Gemini 2.0 Flash is already optimized for cost
 
 ## 🐛 Troubleshooting
+
+### Issue: API key not configured
+```bash
+# Check .env file
+cat .env
+
+# Should contain:
+OPENROUTER_API_KEY=sk-or-v1-...
+```
+
+### Issue: Server not responding
+```bash
+# Check if server is running
+curl http://localhost:8000/health
+
+# Restart server
+uvicorn app:app --reload --host 0.0.0.0 --port 8000
+```
 
 ### Issue: Low match percentage
 - Check if bill has multiple summary pages (duplicate items)
 - Verify final total is clearly visible
 - Check for discount/tax items
 
-### Issue: Missing items
-- Ensure all pages are included in PDF
-- Check if items are in tabular format
-- Verify image quality is good
+## 📁 Project Structure
 
-### Issue: Model timeout
-- Reduce image size
-- Check internet connection
-- Verify Gemini API quota
-
-## 📈 Performance Metrics
-
-Expected performance on medical bills:
-- **Accuracy**: 92-95%
-- **Speed**: 2-4 seconds per document
-- **Cost**: ~$0.0005 per document
+```
+.
+├── app.py                 # Main FastAPI application
+├── requirements.txt       # Python dependencies
+├── .env                   # Environment variables (create this)
+├── .env.example          # Environment template
+├── setup.sh              # Setup script
+├── test_api.py           # Test script
+├── README.md             # This file
+├── IMPLEMENTATION.md     # Technical details
+├── QUICKSTART.md         # Quick start guide
+└── .gitignore           # Git ignore
+```
 
 ## 🔐 Security
 
-- Never commit `.env` file
-- Use environment variables for API keys
-- Validate input URLs before processing
+- ✅ `.env` file is in `.gitignore`
+- ✅ API keys never committed to Git
+- ✅ Use environment variables for secrets
+- ✅ Validate input URLs before processing
 
 ## 📄 License
 
 MIT License - Feel free to use for the hackathon!
 
-## 👥 Support
+## 🙏 Acknowledgments
 
-For issues or questions, check the code comments or raise an issue.
+- **OpenRouter** - Unified API for AI models
+- **Google Gemini** - Powerful vision AI
+- **FastAPI** - Modern Python web framework
+- **HackRx Datathon** - Problem statement
+
+## 📞 Support
+
+For issues or questions:
+- Check the [IMPLEMENTATION.md](IMPLEMENTATION.md) for technical details
+- Review [QUICKSTART.md](QUICKSTART.md) for setup help
+- Open an issue on GitHub
 
 ---
 
-**Built with ❤️ using Gemini 2.0 Flash for HackRx Datathon**
+**Built with ❤️ using Gemini 2.0 Flash via OpenRouter for HackRx Datathon**
+
+**Live Demo**: http://localhost:8000  
+**API Docs**: http://localhost:8000/docs  
+**Health Check**: http://localhost:8000/health
