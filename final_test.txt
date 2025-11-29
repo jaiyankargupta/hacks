@@ -1,0 +1,16 @@
+🚀 Google Drive Bill Extraction Tester
+
+
+================================================================================
+🧪 Testing Bill Extraction
+================================================================================
+
+📄 Original URL: https://drive.google.com/file/d/1ZT4LDNoEC6R7tNSikSeaI7bstGJiM3E5/view?usp=sharing
+🔗 Direct URL:   https://drive.google.com/uc?export=download&id=1ZT4LDNoEC6R7tNSikSeaI7bstGJiM3E5
+
+⏳ Sending request to API...
+📊 Status Code: 500
+
+❌ ERROR: 500
+
+{"detail":"Model call failed: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-flash-latest is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}\nTraceback (most recent call last):\n  File \"/Users/jaiyankargupta/hrx_hacks/billExtraction/app.py\", line 349, in extract_bill_data\n    resp = client.models.generate_content(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/google/genai/models.py\", line 4405, in generate_content\n    response = self._generate_content(\n               ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/google/genai/models.py\", line 3667, in _generate_content\n    response_dict = self.api_client.request(\n                    ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/google/genai/_api_client.py\", line 325, in request\n    response = self._request(http_request, stream=False)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/google/genai/_api_client.py\", line 263, in _request\n    return self._request_unauthorized(http_request, stream)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/google/genai/_api_client.py\", line 285, in _request_unauthorized\n    errors.APIError.raise_for_response(response)\n  File \"/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/google/genai/errors.py\", line 100, in raise_for_response\n    raise ClientError(status_code, response)\ngoogle.genai.errors.ClientError: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-flash-latest is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}\n"}

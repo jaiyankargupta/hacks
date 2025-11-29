@@ -3,20 +3,19 @@ import io
 import json
 import traceback
 import os
-import base64
 from typing import Dict, Any, List, Optional
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, HttpUrl
 from dotenv import load_dotenv
+from google import genai
 
 load_dotenv() 
 
 app = FastAPI(title="Medical Bill Extraction API", version="1.0.0")
 
-# OpenRouter configuration
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# Google Gemini configuration
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 class DocumentInput(BaseModel):
     document: HttpUrl 
@@ -323,64 +322,43 @@ def extract_bill_data(payload: DocumentInput):
     if kind == "unknown":
         raise HTTPException(status_code=400, detail="Could not determine file type (not PDF or image)")
 
-    # Step 3: Encode file to base64 for OpenRouter
+    # Step 3: Upload to Gemini
     try:
-        base64_data = encode_file_to_base64(content, mime_type)
+        # Save to temporary file
+        import tempfile
+        import os
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf" if kind == "pdf" else ".png") as tmp_file:
+            tmp_file.write(content)
+            tmp_path = tmp_file.name
+        
+        # Upload to Gemini
+        uploaded = client.files.upload(path=tmp_path)
+        
+        # Clean up temp file
+        os.unlink(tmp_path)
     except Exception as e:
         tb = traceback.format_exc()
-        raise HTTPException(status_code=500, detail=f"Failed to encode file: {e}\n{tb}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload file to Gemini: {e}\n{tb}")
 
-    # Step 4: Call OpenRouter API with Gemini 2.0 Flash
-    prompt = f"File type: {kind} (mime: {mime_type})\n\n{PROMPT}"
+    # Step 4: Call Gemini 2.0 Flash with enhanced prompt
+    prompt_text = f"File type: {kind} (mime: {mime_type})\n\n{PROMPT}"
     
     try:
-        # Prepare OpenRouter request
-        openrouter_request = {
-            "model": "google/gemini-2.0-flash-exp:free",  # Using free tier
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": base64_data
-                            }
-                        },
-                        {
-                            "type": "text",
-                            "text": prompt
-                        }
-                    ]
-                }
+        # Using Gemini 1.5 Flash for better rate limits
+        from google.genai import types
+        resp = client.models.generate_content(
+            model="gemini-2.0-flash-exp",
+            contents=[
+                types.Part.from_uri(file_uri=uploaded.uri, mime_type=uploaded.mime_type),
+                prompt_text
             ]
-        }
-        
-        # Make request to OpenRouter
-        with httpx.Client(timeout=120.0) as client_http:
-            response = client_http.post(
-                f"{OPENROUTER_BASE_URL}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "http://localhost:8000",  # Optional
-                    "X-Title": "Medical Bill Extraction"  # Optional
-                },
-                json=openrouter_request
-            )
-            response.raise_for_status()
-            openrouter_response = response.json()
-            
+        )
     except Exception as e:
         tb = traceback.format_exc()
-        raise HTTPException(status_code=500, detail=f"OpenRouter API call failed: {e}\n{tb}")
+        raise HTTPException(status_code=500, detail=f"Model call failed: {e}\n{tb}")
 
     # Step 5: Parse response
-    try:
-        text_out = openrouter_response["choices"][0]["message"]["content"]
-    except (KeyError, IndexError) as e:
-        raise HTTPException(status_code=502, detail=f"Invalid OpenRouter response format: {e}")
-    
+    text_out = resp.text if hasattr(resp, "text") else str(resp)
     parsed_json = extract_json_from_text(text_out)
     
     if parsed_json is None:
@@ -430,8 +408,8 @@ def root():
     return {
         "status": "healthy",
         "service": "Medical Bill Extraction API",
-        "provider": "OpenRouter",
-        "model": "google/gemini-2.0-flash-exp:free",
+        "provider": "Google Gemini",
+        "model": "gemini-2.0-flash-exp",
         "version": "1.0.0"
     }
 
@@ -441,9 +419,9 @@ def health():
     """Detailed health check"""
     return {
         "status": "ok",
-        "provider": "OpenRouter",
-        "model": "google/gemini-2.0-flash-exp:free",
-        "api_key_configured": bool(OPENROUTER_API_KEY),
+        "provider": "Google Gemini",
+        "model": "gemini-2.0-flash-exp",
+        "api_key_configured": bool(os.getenv("GOOGLE_API_KEY")),
         "features": [
             "PDF extraction",
             "Image extraction",
